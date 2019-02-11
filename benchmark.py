@@ -17,43 +17,10 @@ from xgboost import XGBClassifier
 
 from sklearn.metrics import cohen_kappa_score, make_scorer
 
+from preprocessing import TSFormatting, LowVarianceFeaturesRemover, preprocess_data
+
 import matplotlib.pyplot as plt
 import sys
-
-
-
-
-
-from sklearn.metrics import average_precision_score, precision_recall_curve
-
-def plot_prec_rec_curve(y_true, y_score, which_set, indentation='\t\t'):
-    color = {
-        'Training':'b',
-        'Validation':'r',
-        'Test':'r',
-        'Dummy':'orange'
-    }
-    label_for_legend = which_set + ', AP={0:0.4f}'.format(
-        average_precision_score(y_true,y_score))
-
-    precision, recall, _ = precision_recall_curve(y_true, y_score)
-
-    plt.step(recall, precision, #color=color[which_set], alpha=1,
-         where='post', label=label_for_legend)
-
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.ylim([0.0, 1.05])
-    plt.xlim([0.0, 1.0])
-    plt.title('2-class Precision-Recall curve'
-              + ' {0:0.4f}'.format(average_precision_score(y_true,y_score)))
-
-
-
-
-
-
-
 
 
 # Parameters
@@ -95,28 +62,6 @@ if (recompute_test | recompute_training):
     n_tr = len(x_tr)
     n_te = len(x_te)
     print(n_tr, 'training samples /', n_te, 'test samples')
-
-
-# Re-formatting
-class TSFormatting(TransformerMixin):
-    def fit(self, X, y=None, **fit_params):
-        return(self)
-
-    def transform(self, X):
-        data = X.copy()
-        # Create a 0 timestamp to correctly compute the first "interval" value
-        data['initial_zero'] = 0
-        # Stack vertically with expected order of columns
-        data = data[['initial_zero'] + X.columns.tolist()[1:]].stack().reset_index()
-        # Follow API naming convention
-        data.columns=['id', 'time', 'val']
-        # Compute the interval values
-        data['val'] = data.groupby('id')['val'].diff()
-        # Drop the first value
-        data.dropna(inplace=True)
-        # Convert 'timestamp_i' -> i
-        data['time'] = data['time'].apply(lambda s: int(s[10:]))
-        return(data)
 
 
 # Features computation
@@ -177,61 +122,9 @@ n_te = len(x_te)
 print(n_tr, 'training samples /', n_te, 'test samples\n')
 
 
-# Pre-processing wrapper
-class LowVarianceFeaturesRemover(BaseEstimator, TransformerMixin):
-    '''
-    Remove low-variance features based on thresholding
-    '''
-    def __init__(self, threshold=0.2, epsilon=1e-9):
-        self.thr = threshold
-        self.eps = epsilon
-    
-    def _reset(self):
-        if hasattr(self, 'bool_to_keep_'):
-            del self.bool_to_keep_
-    
-    def fit(self, X, y=None):
-        self._reset()
-        criterion = (np.std(X, axis=0) / (np.mean(X, axis=0) + self.eps))
-        self.bool_to_keep_ = criterion > self.thr
-        return(self)
-    
-    def transform(self, X):
-        try:
-            return(X[X.columns[self.bool_to_keep_]])
-        except:
-            return(X[:, self.bool_to_keep_])
-
-
-def preprocess_data(x_tr, x_te, preprocessing_steps=None):
-    # Filter out incorrect columns
-    X_tr = x_tr.copy()
-    X_te = x_te.copy()
-
-    missing_tr_columns = set(X_tr.columns[X_tr.isnull().any()])
-    missing_te_columns = set(X_te.columns[X_te.isnull().any()])
-    missing_columns = list(missing_tr_columns | missing_te_columns)
-
-    X_tr.drop(missing_columns, axis=1, inplace=True)
-    X_te.drop(missing_columns, axis=1, inplace=True)
-
-    # Handle neuron_id as a group identifier
-    groups_tr = X_tr['neuron_id']
-
-    X_tr.drop(columns=['neuron_id'], inplace=True)
-    X_te.drop(columns=['neuron_id'], inplace=True)
-
-    # Center and scale if required
-    if preprocessing_steps is not None:
-        for prep_step in preprocessing_steps:
-            prep_step.fit(X_tr)
-            X_tr = prep_step.transform(X_tr)
-            X_te = prep_step.transform(X_te)
-
-    return(X_tr, X_te, groups_tr)
-
+# Pre-processing
 preprocessing_steps = [LowVarianceFeaturesRemover(), StandardScaler()]
-x_tr, x_te, groups_tr = preprocess_data(x_tr, x_te)
+x_tr, x_te, groups_tr = preprocess_data(x_tr, x_te, preprocessing_steps=None)
 
 
 # Classifier possibilities
@@ -318,10 +211,6 @@ def classify(x_tr, y_tr, groups_tr, est, est_params=None,
         from sklearn.metrics import roc_curve, auc
         y_train_score = clf.predict_proba(X_train)[:, 1]
         y_test_score = clf.predict_proba(X_test)[:, 1]
-        plot_prec_rec_curve(y_train, y_train_score, 'Training')
-        plot_prec_rec_curve(y_test, y_test_score, 'Test')
-        plt.show()
-
 
         print('Training score:', cohen_kappa_score(y_train, y_train_pred))
         print('Test score:', cohen_kappa_score(y_test, y_test_pred))

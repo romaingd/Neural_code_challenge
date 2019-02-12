@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.model_selection import GroupShuffleSplit, GridSearchCV
-from sklearn.metrics import cohen_kappa_score, make_scorer
+from sklearn.metrics import cohen_kappa_score, make_scorer, accuracy_score
 
 
 def classify(x_tr, y_tr, groups_tr, est, est_params=None,
@@ -50,6 +50,9 @@ def classify(x_tr, y_tr, groups_tr, est, est_params=None,
 
         print('Training score:', cohen_kappa_score(y_train, y_train_pred))
         print('Test score:', cohen_kappa_score(y_test, y_test_pred))
+
+        print('Training accuracy:', accuracy_score(y_train, y_train_pred))
+        print('Test accuracy:', accuracy_score(y_test, y_test_pred))
 
         print('Mean training prediction:', np.mean(y_train_pred))
         print('Mean test prediction:', np.mean(y_test_pred))

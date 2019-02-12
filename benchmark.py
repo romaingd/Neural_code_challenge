@@ -8,6 +8,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
@@ -31,7 +32,7 @@ recompute_test = False
 nb_splits = 8
 
 perform_classification = True
-perform_cross_validation = False
+perform_cross_validation = True
 
 plot_feature_importance = True
 
@@ -121,14 +122,15 @@ print(n_tr, 'training samples /', n_te, 'test samples\n')
 
 # Pre-processing
 preprocessing_steps = [LowVarianceFeaturesRemover(), StandardScaler()]
-x_tr, x_te, groups_tr = preprocess_data(x_tr, x_te, preprocessing_steps=None)
+x_tr, x_te, groups_tr = preprocess_data(x_tr, x_te, preprocessing_steps=preprocessing_steps)
 
 
 # Classifier possibilities and parameters
 est_list = [
     RandomForestClassifier(),
     XGBClassifier(),
-    LGBMClassifier()
+    LGBMClassifier(),
+    LogisticRegression()
 ]
 cv_params = [
     {   # RandomForestClassifier
@@ -151,6 +153,11 @@ cv_params = [
         'min_child_weight': [1e1],
         'min_child_samples': [20],
         'class_weight': ['balanced']   
+    },
+    {   # LogisticRegression
+        'C': [1e-2, 1.0, 1e2],
+        'penalty': ['l1', 'l2'],
+        'class_weight': ['balanced'],
     }
 ]
 best_params = [
@@ -174,22 +181,39 @@ best_params = [
         'min_child_weight': 1e1,
         'min_child_samples': 20,
         'class_weight': 'balanced'   
+    },
+    {   # LogisticRegression
+        'C': 1.0,
+        'class_weight': 'balanced'
     }
 ]
-est_idx = 0
+est_idx = 3
 
 
 # Classification
-clf = classify(
-    x_tr=x_tr.values,
-    y_tr=y_tr.values.ravel(),
-    groups_tr=groups_tr.values,
-    est=est_list[est_idx],
-    est_params=best_params[est_idx],
-    perform_cross_validation=perform_cross_validation,
-    cv_params=cv_params[est_idx],
-    random_state=42
-)
+# TODO This try except to catch .values error should be fixed in StandardScaler
+try:
+    clf = classify(
+        x_tr=x_tr.values,
+        y_tr=y_tr.values.ravel(),
+        groups_tr=groups_tr.values,
+        est=est_list[est_idx],
+        est_params=best_params[est_idx],
+        perform_cross_validation=perform_cross_validation,
+        cv_params=cv_params[est_idx],
+        random_state=42
+    )
+except:
+    clf = classify(
+        x_tr=x_tr,
+        y_tr=y_tr.values.ravel(),
+        groups_tr=groups_tr.values,
+        est=est_list[est_idx],
+        est_params=best_params[est_idx],
+        perform_cross_validation=perform_cross_validation,
+        cv_params=cv_params[est_idx],
+        random_state=42
+    )
 print(clf)
 
 

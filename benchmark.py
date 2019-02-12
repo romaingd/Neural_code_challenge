@@ -10,6 +10,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import GaussianNB
 from xgboost import XGBClassifier
+from lightgbm import LGBMClassifier
 
 from sklearn.metrics import cohen_kappa_score, make_scorer
 
@@ -126,12 +127,13 @@ x_tr, x_te, groups_tr = preprocess_data(x_tr, x_te, preprocessing_steps=None)
 # Classifier possibilities and parameters
 est_list = [
     RandomForestClassifier(),
-    XGBClassifier()
+    XGBClassifier(),
+    LGBMClassifier()
 ]
 cv_params = [
     {   # RandomForestClassifier
-        'n_estimators': [150, 200, 250],
-        'max_depth': [10, 11, 12, 13],
+        'n_estimators': [200],
+        'max_depth': [10],
         'class_weight': ['balanced']        
     },
     {   # XGBClassifier
@@ -139,6 +141,16 @@ cv_params = [
         'max_depth': [5, 10, 15],
         'scale_pos_weight': [1/0.15, 1/0.184, 1/0.20],
         'objective': ['binary:hinge', 'binary:logistic']
+    },
+    {   # LGBMClassifier
+        'n_estimators': [100],
+        'num_leaves': [35],
+        'reg_alpha': [1e-2, 1e0, 1e1, 1e2],
+        'reg_lambda': [1e-2, 1e0, 1e1, 1e2],
+        'max_depth': [7],
+        'min_child_weight': [1e1],
+        'min_child_samples': [20],
+        'class_weight': ['balanced']   
     }
 ]
 best_params = [
@@ -152,6 +164,16 @@ best_params = [
         'max_depth': 2,
         'scale_pos_weight': 1/0.184,
         'objective': 'binary:logistic'       
+    },
+    {   # LGBMClassifier
+        'n_estimators': 100,
+        'num_leaves': 35,
+        'reg_alpha': 10,
+        'reg_lambda': 1,
+        'max_depth': 7,
+        'min_child_weight': 1e1,
+        'min_child_samples': 20,
+        'class_weight': 'balanced'   
     }
 ]
 est_idx = 0

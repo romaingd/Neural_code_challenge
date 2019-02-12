@@ -48,11 +48,6 @@ def classify(x_tr, y_tr, groups_tr, est, est_params=None,
         y_train_pred = clf.predict(X_train)
         y_test_pred = clf.predict(X_test)
 
-        # ROC curve
-        from sklearn.metrics import roc_curve, auc
-        y_train_score = clf.predict_proba(X_train)[:, 1]
-        y_test_score = clf.predict_proba(X_test)[:, 1]
-
         print('Training score:', cohen_kappa_score(y_train, y_train_pred))
         print('Test score:', cohen_kappa_score(y_test, y_test_pred))
 

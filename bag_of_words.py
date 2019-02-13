@@ -1,19 +1,10 @@
 import numpy as np
 import pandas as pd
 
-from tsfresh import extract_relevant_features, extract_features
-from tsfresh.feature_extraction import EfficientFCParameters
-
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-
 from pyts.classification import BOSSVSClassifier, SAXVSMClassifier
-
-from sklearn.metrics import cohen_kappa_score, make_scorer
 
 from preprocessing import LowVarianceFeaturesRemover, preprocess_data
 from classification import classify
-from results_exploration import plot_avg_feature_importance
 
 import sys
 

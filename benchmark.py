@@ -1,18 +1,13 @@
 import numpy as np
 import pandas as pd
 
-from tsfresh import extract_relevant_features, extract_features
+from tsfresh import extract_features
 from tsfresh.feature_extraction import EfficientFCParameters
-
-from sklearn.decomposition import PCA
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.naive_bayes import GaussianNB
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
-
-from sklearn.metrics import cohen_kappa_score, make_scorer
 
 from preprocessing import TSFormatting, LowVarianceFeaturesRemover, preprocess_data, CenterScaler
 from classification import classify

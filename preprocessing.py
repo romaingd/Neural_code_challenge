@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 
 from sklearn.base import TransformerMixin, BaseEstimator
+from sklearn.preprocessing import StandardScaler
 
 
 class TSFormatting(TransformerMixin):
@@ -53,6 +54,25 @@ class LowVarianceFeaturesRemover(BaseEstimator, TransformerMixin):
             return(X[X.columns[self.bool_to_keep_]])
         except:
             return(X[:, self.bool_to_keep_])
+
+
+class CenterScaler(BaseEstimator, TransformerMixin):
+    '''
+    Wrapper to have sklearn's StandardScaler return pandas DataFrame
+    '''
+    def __init__(self):
+        self.scaler = StandardScaler()
+    
+    def fit(self, X, y=None):
+        self.scaler.fit(X.values)
+        return(self)
+    
+    def transform(self, X):
+        return(pd.DataFrame(
+            data=self.scaler.transform(X.values),
+            columns=X.columns,
+            index=X.index
+        ))
 
 
 def preprocess_data(x_tr, x_te, preprocessing_steps=None):

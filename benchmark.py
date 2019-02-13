@@ -23,6 +23,7 @@ import sys
 
 # Parameters
 data_folder = './data/'
+isi_folder = './features/isi/'
 features_folder = './features/tsfresh/'
 submission_folder = './submissions/benchmark/'
 
@@ -51,10 +52,10 @@ assert((recompute_test | recompute_training) ^ perform_classification)
 #                                                                             #
 ###############################################################################
 
-# Load data if pre-processing is required
+# Load ISI data if pre-processing is required
 if (recompute_test | recompute_training):
-    x_tr = pd.read_csv(data_folder + 'training.csv', index_col=[0])
-    x_te = pd.read_csv(data_folder + 'input_test.csv', index_col=[0])
+    x_tr = pd.read_csv(isi_folder + 'feat_tr.csv', index_col=[0])
+    x_te = pd.read_csv(isi_folder + 'feat_te.csv', index_col=[0])
 
     y_tr = pd.read_csv(data_folder + 'target.csv', index_col=[0])
 

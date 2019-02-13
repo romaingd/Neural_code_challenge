@@ -20,6 +20,7 @@ import sys
 
 # Parameters
 data_folder = './data/'
+isi_folder = './features/isi/'
 submission_folder = './submissions/benchmark/'
 
 perform_cross_validation = False
@@ -34,8 +35,8 @@ compute_submission = False
 ###############################################################################
 
 # Load features
-x_tr = pd.read_csv(data_folder + 'training.csv', index_col=[0])
-x_te = pd.read_csv(data_folder + 'input_test.csv', index_col=[0])
+x_tr = pd.read_csv(isi_folder + 'feat_tr.csv', index_col=[0])
+x_te = pd.read_csv(isi_folder + 'feat_te.csv', index_col=[0])
 
 y_tr = pd.read_csv(data_folder + 'target.csv', index_col=[0])
 

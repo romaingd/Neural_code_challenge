@@ -15,17 +15,11 @@ class TSFormatting(TransformerMixin):
         return(self)
 
     def transform(self, X):
-        data = X.copy()
-        # Create a 0 timestamp to correctly compute the first "interval" value
-        data['initial_zero'] = 0
-        # Stack vertically with expected order of columns
-        data = data[['initial_zero'] + X.columns.tolist()[1:]].stack().reset_index()
+        data = X.drop(columns=['neuron_id'])
+        # Stack vertically
+        data = data.stack().reset_index()
         # Follow API naming convention
         data.columns=['id', 'time', 'val']
-        # Compute the interval values
-        data['val'] = data.groupby('id')['val'].diff()
-        # Drop the first value
-        data.dropna(inplace=True)
         # Convert 'timestamp_i' -> i
         data['time'] = data['time'].apply(lambda s: int(s[10:]))
         return(data)

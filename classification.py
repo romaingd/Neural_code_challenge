@@ -9,8 +9,8 @@ def classify(x_tr, y_tr, groups_tr, est, est_params=None,
     '''
     Classification wrapper, handling cross-validation and fitting
     '''
-    assert((est_params is not None)
-           | (perform_cross_validation & (cv_params is not None)))
+    if perform_cross_validation:
+        assert(cv_params is not None)
 
     splitter = GroupShuffleSplit(n_splits=5, test_size=0.33,
                                  random_state=random_state)
@@ -40,7 +40,7 @@ def classify(x_tr, y_tr, groups_tr, est, est_params=None,
         y_train = y_tr[train_idx]
         y_test = y_tr[test_idx]
 
-        clf = est.set_params(**est_params)
+        clf = est
         print('Fitting the following classifier:\n', clf, '\n')
 
         clf.fit(X_train, y_train)

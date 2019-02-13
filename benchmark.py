@@ -5,7 +5,6 @@ from tsfresh import extract_relevant_features, extract_features
 from tsfresh.feature_extraction import EfficientFCParameters
 
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -15,7 +14,7 @@ from lightgbm import LGBMClassifier
 
 from sklearn.metrics import cohen_kappa_score, make_scorer
 
-from preprocessing import TSFormatting, LowVarianceFeaturesRemover, preprocess_data
+from preprocessing import TSFormatting, LowVarianceFeaturesRemover, preprocess_data, CenterScaler
 from classification import classify
 from results_exploration import plot_avg_feature_importance
 
@@ -32,8 +31,9 @@ recompute_test = False
 nb_splits = 8
 
 perform_classification = True
-perform_cross_validation = True
+perform_cross_validation = False
 
+use_preprocessing = True
 plot_feature_importance = True
 
 compute_submission = False
@@ -121,58 +121,27 @@ print(n_tr, 'training samples /', n_te, 'test samples\n')
 
 
 # Pre-processing
-preprocessing_steps = [LowVarianceFeaturesRemover(), StandardScaler()]
+if use_preprocessing:
+    preprocessing_steps = [LowVarianceFeaturesRemover(), CenterScaler()]
+else:
+    preprocessing_steps = None
 x_tr, x_te, groups_tr = preprocess_data(x_tr, x_te, preprocessing_steps=preprocessing_steps)
 
 
 # Classifier possibilities and parameters
-est_list = [
-    RandomForestClassifier(),
-    XGBClassifier(),
-    LGBMClassifier(),
-    LogisticRegression()
-]
-cv_params = [
-    {   # RandomForestClassifier
-        'n_estimators': [200],
-        'max_depth': [10],
-        'class_weight': ['balanced']        
-    },
-    {   # XGBClassifier
-        'n_estimators': [150, 200, 250],
-        'max_depth': [5, 10, 15],
-        'scale_pos_weight': [1/0.15, 1/0.184, 1/0.20],
-        'objective': ['binary:hinge', 'binary:logistic']
-    },
-    {   # LGBMClassifier
-        'n_estimators': [100],
-        'num_leaves': [35],
-        'reg_alpha': [1e-2, 1e0, 1e1, 1e2],
-        'reg_lambda': [1e-2, 1e0, 1e1, 1e2],
-        'max_depth': [7],
-        'min_child_weight': [1e1],
-        'min_child_samples': [20],
-        'class_weight': ['balanced']   
-    },
-    {   # LogisticRegression
-        'C': [1e-2, 1.0, 1e2],
-        'penalty': ['l1', 'l2'],
-        'class_weight': ['balanced'],
-    }
-]
-best_params = [
-    {   # RandomForestClassifier
+best_params = {
+    'RandomForest': {
         'n_estimators': 200,
         'max_depth': 10,
         'class_weight': 'balanced'        
     },
-    {   # XGBClassifier
+    'XGB': {
         'n_estimators': 200,
         'max_depth': 2,
         'scale_pos_weight': 1/0.184,
         'objective': 'binary:logistic'       
     },
-    {   # LGBMClassifier
+    'LGBM': {
         'n_estimators': 100,
         'num_leaves': 35,
         'reg_alpha': 10,
@@ -182,12 +151,35 @@ best_params = [
         'min_child_samples': 20,
         'class_weight': 'balanced'   
     },
-    {   # LogisticRegression
+    'LogisticReg': {
         'C': 1.0,
         'class_weight': 'balanced'
     }
-]
-est_idx = 3
+}
+cv_params = {
+    'RandomForest': {
+        'max_depth': [1, 2]
+    },
+    'XGB': {
+        'max_depth': [2, 3],
+        'scale_pos_weight': [1/0.15, 1/0.184, 1/0.20]
+    },
+    'LGBM': {
+        'reg_alpha': [1e-2, 1e0, 1e1, 1e2],
+        'reg_lambda': [1e-2, 1e0, 1e1, 1e2],
+    },
+    'LogisticReg': {
+        'C': [1e-1, 1e0, 1e1]
+    }
+}
+est_list = {
+    'RandomForest': RandomForestClassifier(**best_params['RandomForest']),
+    'XGB': XGBClassifier(**best_params['XGB']),
+    'LGBM': LGBMClassifier(**best_params['LGBM']),
+    'LogisticReg': LogisticRegression(**best_params['LogisticReg'])
+}
+
+est_name = 'LGBM'
 
 
 # Classification
@@ -197,10 +189,9 @@ try:
         x_tr=x_tr.values,
         y_tr=y_tr.values.ravel(),
         groups_tr=groups_tr.values,
-        est=est_list[est_idx],
-        est_params=best_params[est_idx],
+        est=est_list[est_name],
         perform_cross_validation=perform_cross_validation,
-        cv_params=cv_params[est_idx],
+        cv_params=cv_params[est_name],
         random_state=42
     )
 except:
@@ -208,10 +199,9 @@ except:
         x_tr=x_tr,
         y_tr=y_tr.values.ravel(),
         groups_tr=groups_tr.values,
-        est=est_list[est_idx],
-        est_params=best_params[est_idx],
+        est=est_list[est_name],
         perform_cross_validation=perform_cross_validation,
-        cv_params=cv_params[est_idx],
+        cv_params=cv_params[est_name],
         random_state=42
     )
 print(clf)

@@ -7,7 +7,7 @@ from tsfresh.feature_extraction import EfficientFCParameters
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-from pyts.classification import BOSSVSClassifier
+from pyts.classification import BOSSVSClassifier, SAXVSMClassifier
 
 from sklearn.metrics import cohen_kappa_score, make_scorer
 
@@ -51,11 +51,15 @@ x_tr, x_te, groups_tr = preprocess_data(x_tr, x_te, preprocessing_steps=preproce
 
 # Classifier possibilities and parameters
 est_list = [
-    BOSSVSClassifier(n_coefs=None, window_size=3)
+    BOSSVSClassifier(n_coefs=None, window_size=3),
+    SAXVSMClassifier()
 ]
 cv_params = [
     {   # BOSSVSClassifier
         'n_coefs': [None]
+    },
+    {   # SAXSVMClassifier
+        'n_bins': [4]
     }
 ]
 best_params = [
@@ -65,6 +69,13 @@ best_params = [
         'norm_std': False,              # Don't scale
         'smooth_idf': True,             # Prevent division by zero, but bias
         'sublinear_tf': False           # Disable sublinear tf scaling
+    },
+    {   # SAXSVMClassifier
+        'quantiles': 'empirical',
+        'numerosity_reduction': False,
+        'use_idf': True,
+        'n_bins': 4,
+        'window_size': 4
     }
 ]
 est_idx = 0

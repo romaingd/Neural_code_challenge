@@ -54,10 +54,6 @@ if (recompute_test | recompute_training):
 
     y_tr = pd.read_csv(data_folder + 'target.csv', index_col=[0])
 
-    n_tr = len(x_tr)
-    n_te = len(x_te)
-    print(n_tr, 'training samples /', n_te, 'test samples')
-
 
 # Features computation
 def compute_tsfresh_features(x, save_path, nb_splits=8, which_set='training'):
@@ -110,10 +106,6 @@ x_tr = pd.read_csv(features_folder + 'feat_tr.csv', index_col=[0])
 x_te = pd.read_csv(features_folder + 'feat_te.csv', index_col=[0])
 
 y_tr = pd.read_csv(data_folder + 'target.csv', index_col=[0])
-
-n_tr = len(x_tr)
-n_te = len(x_te)
-print(n_tr, 'training samples /', n_te, 'test samples\n')
 
 
 # Pre-processing

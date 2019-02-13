@@ -12,7 +12,7 @@ import sys
 # Parameters
 data_folder = './data/'
 isi_folder = './features/isi/'
-submission_folder = './submissions/benchmark/'
+submission_folder = './submissions/bag_of_words/'
 
 perform_cross_validation = False
 
@@ -30,10 +30,6 @@ x_tr = pd.read_csv(isi_folder + 'feat_tr.csv', index_col=[0])
 x_te = pd.read_csv(isi_folder + 'feat_te.csv', index_col=[0])
 
 y_tr = pd.read_csv(data_folder + 'target.csv', index_col=[0])
-
-n_tr = len(x_tr)
-n_te = len(x_te)
-print(n_tr, 'training samples /', n_te, 'test samples\n')
 
 
 # Pre-processing
@@ -72,6 +68,7 @@ est_list = {
     'BOSSVS': BOSSVSClassifier(**best_params['BOSSVS']),
     'SAXSVM': SAXVSMClassifier(**best_params['SAXSVM'])
 }
+
 est_name = 'BOSSVS'
 
 

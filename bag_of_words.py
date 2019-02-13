@@ -50,35 +50,37 @@ x_tr, x_te, groups_tr = preprocess_data(x_tr, x_te, preprocessing_steps=preproce
 
 
 # Classifier possibilities and parameters
-est_list = [
-    BOSSVSClassifier(n_coefs=None, window_size=3),
-    SAXVSMClassifier()
-]
-cv_params = [
-    {   # BOSSVSClassifier
-        'n_coefs': [None]
-    },
-    {   # SAXSVMClassifier
-        'n_bins': [4]
-    }
-]
-best_params = [
-    {   # BOSSVSClassifier
+best_params = {
+    'BOSSVS': {
         'quantiles': 'empirical',       # Instead of N(0,1) quantiles
         'norm_mean': False,             # Don't center
         'norm_std': False,              # Don't scale
         'smooth_idf': True,             # Prevent division by zero, but bias
-        'sublinear_tf': False           # Disable sublinear tf scaling
+        'sublinear_tf': False,          # Disable sublinear tf scaling
+        'n_coefs': None,                # Mandatory number of Fourier coefs
+        'window_size': 3,               # Mandatory window size for features
     },
-    {   # SAXSVMClassifier
+    'SAXSVM': {
         'quantiles': 'empirical',
         'numerosity_reduction': False,
         'use_idf': True,
         'n_bins': 4,
         'window_size': 4
     }
-]
-est_idx = 0
+}
+cv_params = {
+    'BOSSVS': {
+        'n_coefs': [None]
+    },
+    'SAXSVM': {
+        'n_bins': [4]
+    }
+}
+est_list = {
+    'BOSSVS': BOSSVSClassifier(**best_params['BOSSVS']),
+    'SAXSVM': SAXVSMClassifier(**best_params['SAXSVM'])
+}
+est_name = 'BOSSVS'
 
 
 # Classification
@@ -86,10 +88,9 @@ clf = classify(
     x_tr=x_tr.values,
     y_tr=y_tr.values.ravel(),
     groups_tr=groups_tr.values,
-    est=est_list[est_idx],
-    est_params=best_params[est_idx],
+    est=est_list[est_name],
     perform_cross_validation=perform_cross_validation,
-    cv_params=cv_params[est_idx],
+    cv_params=cv_params[est_name],
     random_state=42
 )
 print(clf)

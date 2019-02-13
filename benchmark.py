@@ -183,27 +183,15 @@ est_name = 'LGBM'
 
 
 # Classification
-# TODO This try except to catch .values error should be fixed in StandardScaler
-try:
-    clf = classify(
-        x_tr=x_tr.values,
-        y_tr=y_tr.values.ravel(),
-        groups_tr=groups_tr.values,
-        est=est_list[est_name],
-        perform_cross_validation=perform_cross_validation,
-        cv_params=cv_params[est_name],
-        random_state=42
-    )
-except:
-    clf = classify(
-        x_tr=x_tr,
-        y_tr=y_tr.values.ravel(),
-        groups_tr=groups_tr.values,
-        est=est_list[est_name],
-        perform_cross_validation=perform_cross_validation,
-        cv_params=cv_params[est_name],
-        random_state=42
-    )
+clf = classify(
+    x_tr=x_tr.values,
+    y_tr=y_tr.values.ravel(),
+    groups_tr=groups_tr.values,
+    est=est_list[est_name],
+    perform_cross_validation=perform_cross_validation,
+    cv_params=cv_params[est_name],
+    random_state=42
+)
 print(clf)
 
 

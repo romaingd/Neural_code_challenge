@@ -14,6 +14,7 @@ data_folder = './data/'
 isi_folder = './features/isi/'
 submission_folder = './submissions/neighbors_isi/'
 
+perform_evaluation = True
 perform_cross_validation = False
 
 compute_submission = False
@@ -42,12 +43,11 @@ x_tr, x_te, groups_tr, y_tr = preprocess_data(
     preprocessing_steps=preprocessing_steps,
     resampling_steps=resampling_steps
 )
-print(len(x_tr), y_tr.mean())
 
 
 # Classifier possibilities and parameters
 best_params = {
-    'EuclideanKNN': {
+    'Euclidean': {
         'n_neighbors': 10,
         'n_jobs': -1,
     },
@@ -61,7 +61,7 @@ best_params = {
     }
 }
 cv_params = {
-    'EuclideanKNN': {
+    'Euclidean': {
         'n_neighbors': [3, 5, 7]
     },
     'MinkowskiL1': {
@@ -72,26 +72,22 @@ cv_params = {
     }
 }
 est_list = {
-    'EuclideanKNN': KNeighborsClassifier(**best_params['EuclideanKNN'], p=2),
+    'Euclidean': KNeighborsClassifier(**best_params['Euclidean'], p=2),
     'MinkowskiL1': KNeighborsClassifier(**best_params['MinkowskiL1'], p=1),
     'KS': KNeighborsClassifier(**best_params['KS'], metric=kolmogorov_smirnov),
 }
 
-est_name = 'MinkowskiL1'
+est_name = 'Euclidean'
+
+
+# Pre-sort the values to speed-up distance computation
+if est_name in ['KS']:
+    x_tr.iloc[:, :] = np.sort(x_tr.values, axis=1)
+    x_te.iloc[:, :] = np.sort(x_te.values, axis=1)
 
 
 # Classification
-if est_name == 'KS':
-    clf = classify(
-        x_tr=np.sort(x_tr.values, axis=1),
-        y_tr=y_tr.values.ravel(),
-        groups_tr=groups_tr.values,
-        est=est_list[est_name],
-        perform_cross_validation=perform_cross_validation,
-        cv_params=cv_params[est_name],
-        random_state=42
-    )
-else:
+if (perform_evaluation | perform_cross_validation):
     clf = classify(
         x_tr=x_tr.values,
         y_tr=y_tr.values.ravel(),
@@ -101,12 +97,12 @@ else:
         cv_params=cv_params[est_name],
         random_state=42
     )
-print(clf)
-
-
-# Compute submission
-if compute_submission:
+else:
+    clf = est_list[est_name]
     clf.fit(x_tr.values, y_tr.values.ravel())
+
+
+if compute_submission:
     y_te_pred = clf.predict(x_te)
     y_te_pred_df = pd.DataFrame(data=y_te_pred, columns=['TARGET'], index=(x_te.index))
     y_te_pred_df.index.name = 'ID'

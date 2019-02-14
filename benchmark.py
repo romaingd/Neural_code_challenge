@@ -26,18 +26,13 @@ recompute_training = False
 recompute_test = False
 nb_splits = 8
 
-perform_classification = True
+perform_evaluation = True
 perform_cross_validation = False
 
 use_preprocessing = True
 plot_feature_importance = True
 
 compute_submission = False
-
-
-# For now, disable recomputing features and performing classification
-# at the same time to prevent stupid mistakes
-assert((recompute_test | recompute_training) ^ perform_classification)
 
 
 
@@ -97,7 +92,9 @@ if recompute_test:
 #                                                                             #
 ###############################################################################
 
-if not perform_classification:
+if (recompute_test | recompute_training):
+    # For now, disable recomputing features and performing classification
+    # at the same time to prevent stupid mistakes
     sys.exit()
 
 
@@ -176,16 +173,19 @@ est_name = 'LGBM'
 
 # Classification
 clf = classify(
+    est=est_list[est_name],
     x_tr=x_tr.values,
     y_tr=y_tr.values.ravel(),
     groups_tr=groups_tr.values,
-    est=est_list[est_name],
+    x_te=x_te.values,
+    test_index=x_te.index,
+    perform_evaluation=perform_evaluation,
     perform_cross_validation=perform_cross_validation,
     cv_params=cv_params[est_name],
+    compute_submission=compute_submission,
+    submission_path=(submission_folder + 'y_te_pred.csv'),
     random_state=42
 )
-print(clf)
-
 
 # Feature importance
 if plot_feature_importance:
@@ -193,12 +193,3 @@ if plot_feature_importance:
         plot_avg_feature_importance(clf.feature_importances_, x_tr.columns)
     except:
         print('Feature importance not available\n')
-
-
-# Compute submission
-if compute_submission:
-    clf.fit(x_tr.values, y_tr.values.ravel())
-    y_te_pred = clf.predict(x_te)
-    y_te_pred_df = pd.DataFrame(data=y_te_pred, columns=['TARGET'], index=(x_te.index))
-    y_te_pred_df.index.name = 'ID'
-    y_te_pred_df.to_csv(submission_folder + 'y_te_pred.csv', header=True, index=True)

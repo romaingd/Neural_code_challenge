@@ -87,23 +87,17 @@ if est_name in ['KS']:
 
 
 # Classification
-if (perform_evaluation | perform_cross_validation):
-    clf = classify(
-        x_tr=x_tr.values,
-        y_tr=y_tr.values.ravel(),
-        groups_tr=groups_tr.values,
-        est=est_list[est_name],
-        perform_cross_validation=perform_cross_validation,
-        cv_params=cv_params[est_name],
-        random_state=42
-    )
-else:
-    clf = est_list[est_name]
-    clf.fit(x_tr.values, y_tr.values.ravel())
-
-
-if compute_submission:
-    y_te_pred = clf.predict(x_te)
-    y_te_pred_df = pd.DataFrame(data=y_te_pred, columns=['TARGET'], index=(x_te.index))
-    y_te_pred_df.index.name = 'ID'
-    y_te_pred_df.to_csv(submission_folder + 'y_te_pred.csv', header=True, index=True)
+clf = classify(
+    est=est_list[est_name],
+    x_tr=x_tr.values,
+    y_tr=y_tr.values.ravel(),
+    groups_tr=groups_tr.values,
+    x_te=x_te.values,
+    test_index=x_te.index,
+    perform_evaluation=perform_evaluation,
+    perform_cross_validation=perform_cross_validation,
+    cv_params=cv_params[est_name],
+    compute_submission=compute_submission,
+    submission_path=(submission_folder + 'y_te_pred.csv'),
+    random_state=42
+)

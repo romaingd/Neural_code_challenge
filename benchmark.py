@@ -113,7 +113,11 @@ if use_preprocessing:
     preprocessing_steps = [LowVarianceFeaturesRemover(), CenterScaler()]
 else:
     preprocessing_steps = None
-x_tr, x_te, groups_tr = preprocess_data(x_tr, x_te, preprocessing_steps=preprocessing_steps)
+x_tr, x_te, groups_tr, _ = preprocess_data(
+    x_tr,
+    x_te,
+    preprocessing_steps=preprocessing_steps
+)
 
 
 # Classifier possibilities and parameters

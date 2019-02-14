@@ -34,7 +34,11 @@ y_tr = pd.read_csv(data_folder + 'target.csv', index_col=[0])
 
 # Pre-processing
 preprocessing_steps = []
-x_tr, x_te, groups_tr = preprocess_data(x_tr, x_te, preprocessing_steps=preprocessing_steps)
+x_tr, x_te, groups_tr, _ = preprocess_data(
+    x_tr,
+    x_te,
+    preprocessing_steps=preprocessing_steps
+)
 
 
 # Classifier possibilities and parameters

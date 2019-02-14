@@ -5,6 +5,7 @@ from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.preprocessing import StandardScaler
 
 
+# Preprocessing wrappers
 class TSFormatting(TransformerMixin):
     '''
     Reformat the data to feed the tsfresh package's feature computation.
@@ -69,7 +70,10 @@ class CenterScaler(BaseEstimator, TransformerMixin):
         ))
 
 
-def preprocess_data(x_tr, x_te, preprocessing_steps=None):
+# Pre-processing 
+def preprocess_data(x_tr, x_te, y_tr=None,
+                    preprocessing_steps=None,
+                    resampling_steps=None):
     '''
     Standard preprocessing pipeline: filter out missing columns, compute
     groups, apply various preprocessing steps.
@@ -97,5 +101,14 @@ def preprocess_data(x_tr, x_te, preprocessing_steps=None):
             prep_step.fit(X_tr)
             X_tr = prep_step.transform(X_tr)
             X_te = prep_step.transform(X_te)
+    
+    # Resample if required
+    if resampling_steps is not None:
+        for rsmp_step in resampling_steps:
+            rsmp_step.set_params(return_indices=True)
+            idx = rsmp_step.fit_resample(X_tr, y_tr)[2]
+            X_tr = X_tr.iloc[idx]
+            y_tr = y_tr.iloc[idx]
+            groups_tr = groups_tr.iloc[idx]
 
-    return(X_tr, X_te, groups_tr)
+    return(X_tr, X_te, groups_tr, y_tr)

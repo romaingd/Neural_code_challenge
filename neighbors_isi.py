@@ -4,6 +4,7 @@ import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier
 from distances import kolmogorov_smirnov
 
+from imblearn.under_sampling import RandomUnderSampler
 from preprocessing import preprocess_data
 from classification import classify
 
@@ -33,7 +34,15 @@ y_tr = pd.read_csv(data_folder + 'target.csv', index_col=[0])
 
 # Pre-processing
 preprocessing_steps = []
-x_tr, x_te, groups_tr = preprocess_data(x_tr, x_te, preprocessing_steps=preprocessing_steps)
+resampling_steps = [RandomUnderSampler()]
+x_tr, x_te, groups_tr, y_tr = preprocess_data(
+    x_tr,
+    x_te,
+    y_tr=y_tr,
+    preprocessing_steps=preprocessing_steps,
+    resampling_steps=resampling_steps
+)
+print(len(x_tr), y_tr.mean())
 
 
 # Classifier possibilities and parameters
@@ -68,7 +77,7 @@ est_list = {
     'KS': KNeighborsClassifier(**best_params['KS'], metric=kolmogorov_smirnov),
 }
 
-est_name = 'KS'
+est_name = 'MinkowskiL1'
 
 
 # Classification

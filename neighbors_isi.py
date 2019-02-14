@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.neighbors import KNeighborsClassifier
+from distances import kolmogorov_smirnov
 
 from preprocessing import preprocess_data
 from classification import classify
@@ -38,31 +39,59 @@ x_tr, x_te, groups_tr = preprocess_data(x_tr, x_te, preprocessing_steps=preproce
 # Classifier possibilities and parameters
 best_params = {
     'EuclideanKNN': {
-        'n_neighbors': 5
+        'n_neighbors': 10,
+        'n_jobs': -1,
+    },
+    'MinkowskiL1': {
+        'n_neighbors': 10,
+        'n_jobs': -1,
+    },
+    'KS': {
+        'n_neighbors': 10,
+        'n_jobs': -1,
     }
 }
 cv_params = {
     'EuclideanKNN': {
         'n_neighbors': [3, 5, 7]
+    },
+    'MinkowskiL1': {
+        'n_neighbors': [5, 10, 15]
+    },
+    'KS': {
+        'n_neighbors': [5, 10, 15]
     }
 }
 est_list = {
-    'EuclideanKNN': KNeighborsClassifier(**best_params['EuclideanKNN'])
+    'EuclideanKNN': KNeighborsClassifier(**best_params['EuclideanKNN'], p=2),
+    'MinkowskiL1': KNeighborsClassifier(**best_params['MinkowskiL1'], p=1),
+    'KS': KNeighborsClassifier(**best_params['KS'], metric=kolmogorov_smirnov),
 }
 
-est_name = 'EuclideanKNN'
+est_name = 'KS'
 
 
 # Classification
-clf = classify(
-    x_tr=x_tr.values,
-    y_tr=y_tr.values.ravel(),
-    groups_tr=groups_tr.values,
-    est=est_list[est_name],
-    perform_cross_validation=perform_cross_validation,
-    cv_params=cv_params[est_name],
-    random_state=42
-)
+if est_name == 'KS':
+    clf = classify(
+        x_tr=np.sort(x_tr.values, axis=1),
+        y_tr=y_tr.values.ravel(),
+        groups_tr=groups_tr.values,
+        est=est_list[est_name],
+        perform_cross_validation=perform_cross_validation,
+        cv_params=cv_params[est_name],
+        random_state=42
+    )
+else:
+    clf = classify(
+        x_tr=x_tr.values,
+        y_tr=y_tr.values.ravel(),
+        groups_tr=groups_tr.values,
+        est=est_list[est_name],
+        perform_cross_validation=perform_cross_validation,
+        cv_params=cv_params[est_name],
+        random_state=42
+    )
 print(clf)
 
 

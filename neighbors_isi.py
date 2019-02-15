@@ -5,7 +5,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from distances import kolmogorov_smirnov
 
 from imblearn.under_sampling import RandomUnderSampler
-from preprocessing import preprocess_data
+from preprocessing import load_data, preprocess_data
 from classification import classify
 
 
@@ -25,25 +25,6 @@ compute_submission = False
 #                             Classification part                             #
 #                                                                             #
 ###############################################################################
-
-# Load features
-x_tr = pd.read_csv(isi_folder + 'feat_tr.csv', index_col=[0])
-x_te = pd.read_csv(isi_folder + 'feat_te.csv', index_col=[0])
-
-y_tr = pd.read_csv(data_folder + 'target.csv', index_col=[0])
-
-
-# Pre-processing
-preprocessing_steps = []
-resampling_steps = [RandomUnderSampler()]
-x_tr, x_te, groups_tr, y_tr = preprocess_data(
-    x_tr,
-    x_te,
-    y_tr=y_tr,
-    preprocessing_steps=preprocessing_steps,
-    resampling_steps=resampling_steps
-)
-
 
 # Classifier possibilities and parameters
 best_params = {
@@ -78,6 +59,25 @@ est_list = {
 }
 
 est_name = 'Euclidean'
+
+
+# Load features
+x_tr, x_te, y_tr = load_data(
+    features_folder=isi_folder,
+    data_folder=data_folder
+)
+
+
+# Pre-process
+preprocessing_steps = []
+resampling_steps = [RandomUnderSampler()]
+x_tr, x_te, groups_tr, y_tr = preprocess_data(
+    x_tr,
+    x_te,
+    y_tr=y_tr,
+    preprocessing_steps=preprocessing_steps,
+    resampling_steps=resampling_steps
+)
 
 
 # Pre-sort the values to speed-up distance computation

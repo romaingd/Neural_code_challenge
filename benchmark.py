@@ -9,7 +9,7 @@ from sklearn.linear_model import LogisticRegression
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
 
-from preprocessing import TSFormatting, LowVarianceFeaturesRemover, preprocess_data, CenterScaler
+from preprocessing import load_data, TSFormatting, LowVarianceFeaturesRemover, preprocess_data, CenterScaler
 from classification import classify
 from results_exploration import plot_avg_feature_importance
 
@@ -98,25 +98,6 @@ if (recompute_test | recompute_training):
     sys.exit()
 
 
-# Load features
-x_tr = pd.read_csv(features_folder + 'feat_tr.csv', index_col=[0])
-x_te = pd.read_csv(features_folder + 'feat_te.csv', index_col=[0])
-
-y_tr = pd.read_csv(data_folder + 'target.csv', index_col=[0])
-
-
-# Pre-processing
-if use_preprocessing:
-    preprocessing_steps = [LowVarianceFeaturesRemover(), CenterScaler()]
-else:
-    preprocessing_steps = None
-x_tr, x_te, groups_tr, _ = preprocess_data(
-    x_tr,
-    x_te,
-    preprocessing_steps=preprocessing_steps
-)
-
-
 # Classifier possibilities and parameters
 best_params = {
     'RandomForest': {
@@ -169,6 +150,25 @@ est_list = {
 }
 
 est_name = 'LGBM'
+
+
+# Load features
+x_tr, x_te, y_tr = load_data(
+    features_folder=features_folder,
+    data_folder=data_folder
+)
+
+
+# Pre-processing
+if use_preprocessing:
+    preprocessing_steps = [LowVarianceFeaturesRemover(), CenterScaler()]
+else:
+    preprocessing_steps = None
+x_tr, x_te, groups_tr, _ = preprocess_data(
+    x_tr,
+    x_te,
+    preprocessing_steps=preprocessing_steps
+)
 
 
 # Classification

@@ -112,3 +112,10 @@ def preprocess_data(x_tr, x_te, y_tr=None,
             groups_tr = groups_tr.iloc[idx]
 
     return(X_tr, X_te, groups_tr, y_tr)
+
+
+def load_data(features_folder, data_folder='./data/'):
+    x_tr = pd.read_csv(features_folder + 'feat_tr.csv', index_col=[0])
+    x_te = pd.read_csv(features_folder + 'feat_te.csv', index_col=[0])
+    y_tr = pd.read_csv(data_folder + 'target.csv', index_col=[0])
+    return(x_tr, x_te, y_tr)

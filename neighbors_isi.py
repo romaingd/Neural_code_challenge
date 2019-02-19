@@ -1,8 +1,11 @@
 import numpy as np
 import pandas as pd
 
+from sklearn.metrics import pairwise_distances
+from scipy.spatial.distance import cdist
+
 from sklearn.neighbors import KNeighborsClassifier
-from distances import kolmogorov_smirnov
+from distances import kolmogorov_smirnov, kolmogorov_smirnov_opt
 
 from imblearn.under_sampling import RandomUnderSampler
 from preprocessing import load_data, preprocess_data
@@ -14,10 +17,51 @@ data_folder = './data/'
 isi_folder = './features/isi/'
 submission_folder = './submissions/neighbors_isi/'
 
+recompute_features = False
+use_precomputed = True
+
 perform_evaluation = True
 perform_cross_validation = False
 
 compute_submission = False
+
+
+###############################################################################
+#                                                                             #
+#                        Features pre-computation part                        #
+#                                                                             #
+###############################################################################
+
+features_to_compute = None
+
+if recompute_features:
+    if features_to_compute == 'KS':
+        x_tr, x_te, y_tr = load_data(
+            features_folder=isi_folder,
+            data_folder=data_folder
+        )
+
+        x_tr_val = np.sort(x_tr.drop(columns=['neuron_id']).values, axis=1)
+        x_te_val = np.sort(x_te.drop(columns=['neuron_id']).values, axis=1)
+
+        feat_tr_val = pairwise_distances(
+            X=x_tr_val,
+            metric=kolmogorov_smirnov_opt,
+            n_jobs=4
+        )
+
+        feat_tr = pd.DataFrame(data=feat_tr_val, index=x_tr.index)
+        feat_tr['neuron_id'] = x_tr['neuron_id']
+        feat_tr.to_csv('/features/KS/feat_tr.csv', index=True, header=True)
+        del feat_tr
+
+
+        feat_te_val = cdist(x_te_val, x_tr_val, metric=kolmogorov_smirnov_opt)
+
+        feat_te = pd.DataFrame(data=feat_te_val, index=x_te.index)
+        feat_te['neuron_id'] = x_te['neuron_id']
+        feat_te.to_csv('/features/KS/feat_te.csv', index=True, header=True)
+        del feat_te
 
 
 ###############################################################################
@@ -58,14 +102,26 @@ est_list = {
     'KS': KNeighborsClassifier(**best_params['KS'], metric=kolmogorov_smirnov),
 }
 
-est_name = 'Euclidean'
+est_name = 'KS'
+
+
+# Make sure we're not trying to load unavailable pre-computed features
+if est_name not in ['KS']:
+    use_precomputed = False
 
 
 # Load features
-x_tr, x_te, y_tr = load_data(
-    features_folder=isi_folder,
-    data_folder=data_folder
-)
+if use_precomputed:
+    x_tr, x_te, y_tr = load_data(
+        features_folder='./features/' + est_name + '/',
+        data_folder=data_folder
+    )
+    est_list[est_name].set_params(metric='precomputed')
+else:
+    x_tr, x_te, y_tr = load_data(
+        features_folder=isi_folder,
+        data_folder=data_folder
+    )
 
 
 # Pre-process
@@ -81,9 +137,10 @@ x_tr, x_te, groups_tr, y_tr = preprocess_data(
 
 
 # Pre-sort the values to speed-up distance computation
-if est_name in ['KS']:
-    x_tr.iloc[:, :] = np.sort(x_tr.values, axis=1)
-    x_te.iloc[:, :] = np.sort(x_te.values, axis=1)
+if not use_precomputed:
+    if est_name in ['KS']:
+        x_tr.iloc[:, :] = np.sort(x_tr.values, axis=1)
+        x_te.iloc[:, :] = np.sort(x_te.values, axis=1)
 
 
 # Classification

@@ -79,39 +79,36 @@ def preprocess_data(x_tr, x_te, y_tr=None,
     groups, apply various preprocessing steps.
     '''
     # Filter out incorrect columns
-    X_tr = x_tr.copy()
-    X_te = x_te.copy()
-
-    missing_tr_columns = set(X_tr.columns[X_tr.isnull().any()])
-    missing_te_columns = set(X_te.columns[X_te.isnull().any()])
+    missing_tr_columns = set(x_tr.columns[x_tr.isnull().any()])
+    missing_te_columns = set(x_te.columns[x_te.isnull().any()])
     missing_columns = list(missing_tr_columns | missing_te_columns)
 
-    X_tr.drop(missing_columns, axis=1, inplace=True)
-    X_te.drop(missing_columns, axis=1, inplace=True)
+    x_tr.drop(missing_columns, axis=1, inplace=True)
+    x_te.drop(missing_columns, axis=1, inplace=True)
 
     # Handle neuron_id as a group identifier
-    groups_tr = X_tr['neuron_id']
+    groups_tr = x_tr['neuron_id']
 
-    X_tr.drop(columns=['neuron_id'], inplace=True)
-    X_te.drop(columns=['neuron_id'], inplace=True)
+    x_tr.drop(columns=['neuron_id'], inplace=True)
+    x_te.drop(columns=['neuron_id'], inplace=True)
 
     # Center and scale if required
     if preprocessing_steps is not None:
         for prep_step in preprocessing_steps:
-            prep_step.fit(X_tr)
-            X_tr = prep_step.transform(X_tr)
-            X_te = prep_step.transform(X_te)
+            prep_step.fit(x_tr)
+            x_tr = prep_step.transform(x_tr)
+            x_te = prep_step.transform(x_te)
     
     # Resample if required
     if resampling_steps is not None:
         for rsmp_step in resampling_steps:
             rsmp_step.set_params(return_indices=True)
-            idx = rsmp_step.fit_resample(X_tr, y_tr)[2]
-            X_tr = X_tr.iloc[idx]
+            idx = rsmp_step.fit_resample(x_tr, y_tr)[2]
+            x_tr = x_tr.iloc[idx]
             y_tr = y_tr.iloc[idx]
             groups_tr = groups_tr.iloc[idx]
 
-    return(X_tr, X_te, groups_tr, y_tr)
+    return(x_tr, x_te, groups_tr, y_tr)
 
 
 def load_data(features_folder, data_folder='./data/'):

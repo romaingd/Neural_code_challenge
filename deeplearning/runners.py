@@ -1,180 +1,20 @@
-import numpy as np
-import pandas as pd
 
-from preprocessing import load_data, preprocess_data
-from classification import classify
+import os
+import shutil
+
+import numpy as np
 
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
-from torch.autograd import Variable
 import torch.optim as optim
+from torch.utils.data import DataLoader
+from torch.autograd import Variable
+from deeplearning.metrics import get_cohen_kappa_score_from_confmat
 
-from sklearn.metrics import confusion_matrix, cohen_kappa_score
-from sklearn.model_selection import GroupShuffleSplit
-
-import math
-import os
-import glob
-import shutil
-import itertools
-
-
-# Parameters
-data_folder = './data/'
-isi_folder = './features/isi/'
-submission_folder = './submissions/cnn/'
-
-perform_evaluation = True
-
-compute_submission = False
 
 cuda = torch.cuda.is_available()
 print('Training on ' + ('GPU' if cuda else 'CPU'))
 
-
-
-############
-# Define classifier #
-############
-
-class VGG(nn.Module):
-
-    def __init__(self, features, num_classes, base=64, arch='vgg'):
-        super(VGG, self).__init__()
-        self.arch = arch
-        self.features = features
-        self.classifier = nn.Sequential(
-            nn.Linear(base * 4 * 6, base * 4),
-            nn.ReLU(True),
-            nn.Dropout(),
-            nn.Linear(base * 4, base * 2),
-            nn.ReLU(True),
-            nn.Dropout(),
-            nn.Linear(base * 2, num_classes),
-        )
-        self._initialize_weights()
-
-    def forward(self, x):
-        x = self.features(x)
-        x = x.view(x.size(0), -1)
-        x = self.classifier(x)
-        return x
-
-    def _initialize_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv1d):
-                n = m.kernel_size[0] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
-                if m.bias is not None:
-                    m.bias.data.zero_()
-            elif isinstance(m, nn.BatchNorm1d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-            elif isinstance(m, nn.Linear):
-                m.weight.data.normal_(0, 0.01)
-                m.bias.data.zero_()
-
-def make_layers(cfg, batch_norm=False):
-    layers = []
-    in_channels = 1
-    for v in cfg:
-        if v == 'M':
-            layers += [nn.MaxPool1d(kernel_size=2, stride=2)]
-        else:
-            conv1d = nn.Conv1d(in_channels, v, kernel_size=3, padding=1)
-            if batch_norm:
-                layers += [conv1d, nn.BatchNorm1d(v), nn.ReLU(inplace=True)]
-            else:
-                layers += [conv1d, nn.ReLU(inplace=True)]
-            in_channels = v
-    return nn.Sequential(*layers)
-
-base = 8
-cfg = {
-    'A': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
-    'B': [base, 'M', base*2, 'M', base*4, 'M'],
-    'D': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
-    'E': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M'],
-}
-# cfg = {
-#     'A': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
-#     'B': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
-#     'D': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
-#     'E': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M'],
-# }
-
-def vgg13bn(**kwargs):
-    model = VGG(make_layers(cfg['B'], batch_norm=True), arch='vgg13bn', base=base, **kwargs)
-    return model
-
-# def vgg13bn(**kwargs):
-#     model = VGG(make_layers(cfg['B'], batch_norm=True), arch='vgg13bn', **kwargs)
-#     return model
-
-def vgg16bn(**kwargs):
-    model = VGG(make_layers(cfg['D'], batch_norm=True), arch='vgg16bn', **kwargs)
-    return model
-
-def vgg19bn(**kwargs):
-    model = VGG(make_layers(cfg['E'], batch_norm=True), arch='vgg19bn', **kwargs)
-    return model
-
-
-
-#
-# Load data #
-#
-
-# Usual procedure
-x_tr, x_te, y_tr = load_data(
-    features_folder=isi_folder,
-    data_folder=data_folder
-)
-
-preprocessing_steps = []
-resampling_steps = []
-x_tr, x_te, groups_tr, y_tr = preprocess_data(
-    x_tr,
-    x_te,
-    y_tr=y_tr,
-    preprocessing_steps=preprocessing_steps,
-    resampling_steps=resampling_steps
-)
-
-
-# CNN specific pre-processing
-class TimeSeriesDataset(Dataset):
-    def __init__(self, data, target, norm, is_train):
-        self.data = data
-        self.target = target
-        self.norm = norm
-        self.is_train = is_train
-
-    def __len__(self):
-        return(self.data.shape[0])
-
-    def __getitem__(self, idx):
-        data_idx = np.expand_dims(self.data[idx, :], axis=0)
-        target_idx = self.target[idx]
-        return(data_idx, target_idx)
-
-
-# Group-wise splitter
-# Group-wise splitter
-splitter = GroupShuffleSplit(n_splits=5, test_size=0.33,
-                             random_state=42)
-train_idx, test_idx = next(splitter.split(x_tr, y_tr, groups_tr))
-
-train_data = TimeSeriesDataset(x_tr.values[train_idx], y_tr.values[train_idx].ravel(), False, True)
-test_data = TimeSeriesDataset(x_tr.values[test_idx], y_tr.values[test_idx].ravel(), False, False)
-
-
-
-
-#
-# Training procedure #
-#
 
 def run_trainer(experiment_path, model_path, model, train_loader, test_loader, get_acc, resume, batch_size, num_epoch):
 
@@ -237,7 +77,6 @@ def run_trainer(experiment_path, model_path, model, train_loader, test_loader, g
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f} Acc: {:.2f}%/{:.2f}%'.format(
                     epoch, batch_idx * len(data), len(train_loader.dataset),
                     100. * batch_idx / len(train_loader), loss.data.item(),
-                    # 100. * batch_idx / len(train_loader), loss.data[0],
                     100. * correct / num_instance, 100. * total_correct / total ))
         
         return 100. * total_correct / total, np.dstack(train_conf_mats).sum(axis=2)
@@ -255,7 +94,6 @@ def run_trainer(experiment_path, model_path, model, train_loader, test_loader, g
             if cuda:
                 data, target = data.cuda(), target.cuda()
             output = model(data)
-            # test_loss += criterion(output, target).data[0] # sum up batch loss
             test_loss += criterion(output, target).data.item() # sum up batch loss
             
             pred, correct, num_instance, conf_mat = get_acc(output, target)
@@ -350,66 +188,3 @@ def run_experiment(experiment_path, train_data, test_data, model_root, models, n
         exp_result[model.arch] = {'lrcurve':lrcurve, 'conf_mats':conf_mats}
         
     return exp_result
-
-
-
-def get_models(): # tuples of (batch_size, model)
-    return [
-        (1024, vgg13bn(num_classes=2))
-    ]
-
-def get_acc(output, target):
-    # takes in two tensors to compute accuracy
-    pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
-    correct = pred.eq(target.data.view_as(pred)).cpu().sum()
-    conf_mat = confusion_matrix(pred.cpu().numpy(), target.data.cpu().numpy(), labels=range(2))
-    return np.squeeze(pred.cpu().numpy()), correct, target.size(0), conf_mat
-
-def get_cohen_kappa_score(output, target):
-    pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
-    return(cohen_kappa_score(pred.cpu().numpy(), target.data.cpu().numpy()))
-
-def get_cohen_kappa_score_from_confmat(confusion, weights=None):
-    n_classes = confusion.shape[0]
-    sum0 = np.sum(confusion, axis=0)
-    sum1 = np.sum(confusion, axis=1)
-    expected = np.outer(sum0, sum1) / np.sum(sum0)
-
-    if weights is None:
-        w_mat = np.ones([n_classes, n_classes], dtype=np.int)
-        w_mat.flat[:: n_classes + 1] = 0
-    elif weights == "linear" or weights == "quadratic":
-        w_mat = np.zeros([n_classes, n_classes], dtype=np.int)
-        w_mat += np.arange(n_classes)
-        if weights == "linear":
-            w_mat = np.abs(w_mat - w_mat.T)
-        else:
-            w_mat = (w_mat - w_mat.T) ** 2
-    else:
-        raise ValueError("Unknown kappa weighting type.")
-
-    k = np.sum(w_mat * confusion) / np.sum(w_mat * expected)
-    return(1 - k)
-
-
-#
-# Run parameters #
-#
-
-experiments = [
-    {
-        'experiment_path':'roll', 
-        'train_data': train_data,
-        'test_data': test_data,
-        'model_root':'model', 
-        'models':get_models(),
-        'norm':False,
-        'get_acc': get_acc,
-        'resume':False,  
-        'num_epoch':23
-    }
-]
-
-for experiment in experiments:
-    exp_log = run_experiment(**experiment)
-    print(exp_log)

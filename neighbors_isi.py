@@ -21,8 +21,8 @@ submission_folder = './submissions/neighbors_isi/'
 recompute_features = False
 use_precomputed = False
 
-perform_evaluation = False
-perform_cross_validation = True
+perform_evaluation = True
+perform_cross_validation = False
 
 compute_submission = False
 

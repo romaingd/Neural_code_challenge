@@ -6,25 +6,6 @@ from sklearn.metrics import cohen_kappa_score, make_scorer, accuracy_score
 from sklearn.base import clone
 
 
-def evaluate_clf(clf, X_train, y_train, X_test, y_test):
-    '''
-    Evaluate a classifier on various metrics, on the training and test sets
-    '''
-    y_train_pred = clf.predict(X_train)
-    y_test_pred = clf.predict(X_test)
-
-    print('Training score:', cohen_kappa_score(y_train, y_train_pred))
-    print('Test score:', cohen_kappa_score(y_test, y_test_pred))
-
-    print('Training accuracy:', accuracy_score(y_train, y_train_pred))
-    print('Test accuracy:', accuracy_score(y_test, y_test_pred))
-
-    print('Mean training prediction:', np.mean(y_train_pred))
-    print('Mean test prediction:', np.mean(y_test_pred))
-
-    print('\n')
-
-
 def classify(est, x_tr, y_tr, groups_tr, x_te=None, test_index=None,
              perform_evaluation=True,
              perform_cross_validation=False, cv_params=None,
@@ -84,3 +65,34 @@ def classify(est, x_tr, y_tr, groups_tr, x_te=None, test_index=None,
         y_te_pred_df.to_csv(submission_path, header=True, index=True)
 
     return(clf)
+
+
+def evaluate_clf(clf, X_train, y_train, X_test, y_test):
+    '''
+    Evaluate a classifier on various metrics, on the training and test sets
+    '''
+    y_train_pred = clf.predict(X_train)
+    y_test_pred = clf.predict(X_test)
+
+    print('Training score:', cohen_kappa_score(y_train, y_train_pred))
+    print('Test score:', cohen_kappa_score(y_test, y_test_pred))
+
+    print('Training accuracy:', accuracy_score(y_train, y_train_pred))
+    print('Test accuracy:', accuracy_score(y_test, y_test_pred))
+
+    print('Mean training prediction:', np.mean(y_train_pred))
+    print('Mean test prediction:', np.mean(y_test_pred))
+
+    print('\n')
+
+
+def find_best_threshold(y_proba, y_true):
+    best_thr, best_score = 0, 0
+    step = 0.01
+    for thr in np.arange(0, 1+step, step):
+        score = cohen_kappa_score((y_proba > thr) * 1, y_true)
+        if score > best_score:
+            best_score = score
+            best_thr = thr
+    print('Threshold: {:.3f} Score: {:.3f}'.format(best_thr, best_score))
+    return(best_thr, best_score)
